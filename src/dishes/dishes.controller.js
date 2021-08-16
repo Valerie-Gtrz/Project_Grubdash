@@ -21,12 +21,38 @@ function hasRequiredFields(req, res, next) {
   next();
 }
 
+function dishExists(req, res, next){
+  const { dishId } = req.params;
+  const foundDish = dishes.find(dish => dish.id === dishId);
+
+  if (!foundDish) {
+    return next({
+      status: 404,
+      message: "Dish not found"
+    });
+  }
+  res.locals.foundDish = foundDish;
+  next();
+}
+
+function hasValidPrice(req, res, next){
+  const { data: { price } = {} } = req.body;
+  //if price field is not greater than zero return 400
+  if (price <= 0 || !isNaN(price)) {
+    return next({
+      status: 400,
+      message: "Dish must have a price that is an integer greater than 0",
+    });
+  }
+  next();
+}
+
 //C /*working*/
 const create = (req, res, next) => {
   /* set data body default to empty object so program doesn't try to destructure fields from an undefined object and crash our app*/
   //destructuring the fields required to create a new dish and check if each exists
-  const { data: { name, description, price, image_url } = {} } = req.body;
-  //if price field is not greater than zero return 400
+   const { data: { name, description, price, image_url } = {} } = req.body;
+  // //if price field is not greater than zero return 400
   if (price <= 0) {
     return next({
       status: 400,
@@ -47,22 +73,13 @@ const create = (req, res, next) => {
 
 //R /*working*/
 const read = (req, res, next) => {
-  const { dishId } = req.params;
-  const foundDish = dishes.find((dish) => dish.id === dishId);
-
-  if (!foundDish) {
-    return next({
-      status: 404,
-      message: "Dish not found",
-    });
-  }
-  res.json({ data: foundDish });
+  res.json({ data: res.locals.foundDish });
 };
 
 //U
-// const update =(req, res, next)=>{
-//   res.status(400).json({data: updatedDish})
-// }
+const update =(req, res, next)=>{
+  res.send("ok")
+}
 
 //D
 /*methodNotAllowed - wired to router*/
@@ -70,12 +87,14 @@ const read = (req, res, next) => {
 //L
 //lists all the dishes on front page /*working*/
 const list = (req, res, next) => {
-  return res.json({ data: dishes }); //all responses come an an pbject with a "data" key so we need to return an object witha data key and the data itself its dishes
+  return res.json({ data: dishes }); //all responses come an an object with a "data" key so we need to return an object witha data key and the data itself its dishes
 };
 
 // TODO: Implement the /dishes handlers needed to make the tests pass
 module.exports = {
+
   create: [hasRequiredFields, create],
+  read: [dishExists, read],
+  update: [dishExists, hasRequiredFields, hasValidPrice, update],
   list,
-  read,
 };
