@@ -11,7 +11,7 @@ const app = express();
 // You have not learned about CORS yet.
 // The following line let's this API be used by any website.
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); //lets us access the request body req.body
 
 app.use("/dishes", dishesRouter);
 app.use("/orders", ordersRouter);
