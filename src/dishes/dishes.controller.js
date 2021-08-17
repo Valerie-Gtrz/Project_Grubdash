@@ -1,100 +1,92 @@
 const path = require("path");
+
 // Use the existing dishes data
 const dishes = require(path.resolve("src/data/dishes-data"));
 
 // Use this function to assign ID's when necessary
 const nextId = require("../utils/nextId");
 
-//Validation middleware /*working*/
-//===================================================
-function hasRequiredFields(req, res, next) {
-  const data = req.body.data || {}; //we set it to a default object so that we do not try to destructure items fromm and indefined obj id data is not found and it wont crash our entire app
-  const requiredFields = ["name", "description", "price", "image_url"];
-  for (const field of requiredFields) {
-    if (!data[field]) {
-      return next({
-        status: 400,
-        message: `Dish must include a ${field}`,
-      }); //send to error handler so we need to return something. return stops the function from running. when you say next we know you are either going to go to the next fxn that will either return next or send a response
-    }
-  }
-  next();
-}
+// TODO: Implement the /dishes handlers needed to make the tests pass
 
-function dishExists(req, res, next){
+function dishExists(req, res, next) {
   const { dishId } = req.params;
-  const foundDish = dishes.find(dish => dish.id === dishId);
+  const foundDish = dishes.find((dish) => dish.id === dishId);
 
   if (!foundDish) {
     return next({
       status: 404,
-      message: "Dish not found"
+      message: `Dish does not exist: ${dishId}`,
     });
   }
-  res.locals.foundDish = foundDish;
-  next();
+  res.locals.foundDish = foundDish; //res.locals is and object and its values only persist through the lifetime of a request
+  return next();
 }
 
-function hasValidPrice(req, res, next){
-  const { data: { price } = {} } = req.body;
-  //if price field is not greater than zero return 400
-  if (price <= 0 || !isNaN(price)) {
+const checkDish = (req, res, next) => {
+  const {data: { name, description, price, image_url }} = req.body;
+  if (!name || name == "")
+    return next({ status: 400, message: "Dish must include a name" });
+  if (!description || description == "")
+    return next({ status: 400, message: "Dish must include a description" });
+  if (!price)
+    return next({ status: 400, message: "Dish must include a price" });
+  if (typeof price !== "number" || price <= 0)
     return next({
       status: 400,
       message: "Dish must have a price that is an integer greater than 0",
     });
+  if (!image_url || image_url == "")
+    return next({ status: 400, message: "Dish must include an image_url" });
+  else {
+    res.locals.newDish = {
+      id: nextId(),
+      name: name,
+      description: description,
+      price: price,
+      image_url: image_url,
+    };
+    next();
   }
-  next();
-}
-
-//C /*working*/
-const create = (req, res, next) => {
-  /* set data body default to empty object so program doesn't try to destructure fields from an undefined object and crash our app*/
-  //destructuring the fields required to create a new dish and check if each exists
-   const { data: { name, description, price, image_url } = {} } = req.body;
-  // //if price field is not greater than zero return 400
-  if (price <= 0) {
-    return next({
-      status: 400,
-      message: "Dish must have a price that is an integer greater than 0",
-    });
-  }
-  //else make new dish and add the dish to the dishes array
-  const newDish = {
-    id: nextId(), //in instructions, already provided
-    name,
-    description,
-    price,
-    image_url,
-  };
-  dishes.push(newDish); //push new dish to the dishes-data array
-  return res.status(201).json({ data: newDish }); //you can return a response or not but there is no harm in doing so
 };
 
-//R /*working*/
+const create = (req, res, next) => {
+  dishes.push(res.locals.newDish);
+  res.status(201).json({ data: res.locals.newDish });
+};
+
 const read = (req, res, next) => {
   res.json({ data: res.locals.foundDish });
 };
 
-//U
-const update =(req, res, next)=>{
-  res.send("ok")
-}
 
-//D
-/*methodNotAllowed - wired to router*/
 
-//L
-//lists all the dishes on front page /*working*/
-const list = (req, res, next) => {
-  return res.json({ data: dishes }); //all responses come an an object with a "data" key so we need to return an object witha data key and the data itself its dishes
+const update = (req, res, next) => {
+  const originalFoundDish = res.locals.foundDish;
+  const {data: { id, name, price, description, image_url }} = req.body;
+  if (id && id !== req.params.dishId)
+    return next({
+      status: 400,
+      message: `Dish id ${id} does not match dish id ${req.params.dishId}`,
+    });
+
+  res.locals.foundDish = {
+    id: originalFoundDish.id,
+    name: name,
+    description: description,
+    price: price,
+    image_url: image_url,
+  };
+  res.json({ data: res.locals.foundDish });
 };
 
-// TODO: Implement the /dishes handlers needed to make the tests pass
-module.exports = {
+const list = (req, res, next) => {
+  res.json({ data: dishes });
+};
 
-  create: [hasRequiredFields, create],
-  read: [dishExists, read],
-  update: [dishExists, hasRequiredFields, hasValidPrice, update],
+module.exports = {
+  dishExists,
   list,
+  create: [checkDish, create],
+  read: [dishExists, read],
+  update: [dishExists, checkDish, update],
 };
