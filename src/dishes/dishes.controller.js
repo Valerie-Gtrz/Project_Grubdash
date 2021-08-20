@@ -8,6 +8,8 @@ const nextId = require("../utils/nextId");
 
 // TODO: Implement the /dishes handlers needed to make the tests pass
 
+//=========validation middleware==========//
+
 function dishExists(req, res, next) {
   const { dishId } = req.params;
   const foundDish = dishes.find((dish) => dish.id === dishId);
@@ -18,7 +20,7 @@ function dishExists(req, res, next) {
       message: `Dish does not exist: ${dishId}`,
     });
   }
-  res.locals.foundDish = foundDish; //res.locals is and object and its values only persist through the lifetime of a request
+  res.locals.foundDish = foundDish; //res.locals is an object and its values only persist through the lifetime of a request
   return next();
 }
 
@@ -49,17 +51,18 @@ const checkDish = (req, res, next) => {
   }
 };
 
+//C
 const create = (req, res, next) => {
   dishes.push(res.locals.newDish);
   res.status(201).json({ data: res.locals.newDish });
 };
 
+//R
 const read = (req, res, next) => {
   res.json({ data: res.locals.foundDish });
 };
 
-
-
+//U
 const update = (req, res, next) => {
   const originalFoundDish = res.locals.foundDish;
   const {data: { id, name, price, description, image_url }} = req.body;
@@ -79,6 +82,10 @@ const update = (req, res, next) => {
   res.json({ data: res.locals.foundDish });
 };
 
+//D
+//method not allowed! wired to router
+
+//L
 const list = (req, res, next) => {
   res.json({ data: dishes });
 };
